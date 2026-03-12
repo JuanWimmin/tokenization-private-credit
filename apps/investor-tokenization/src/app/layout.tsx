@@ -37,11 +37,11 @@ export default function RootLayout({
   children: ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" className="light" suppressHydrationWarning>
       <body
         className={cn(
           Exo2.variable,
-          "antialiased dark",
+          "antialiased",
           spaceGrotesk.className,
         )}
       >
