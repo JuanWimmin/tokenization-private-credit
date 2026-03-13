@@ -14,7 +14,11 @@ export class ApiKeyGuard implements CanActivate {
 
   canActivate(context: ExecutionContext): boolean {
     const request = context.switchToHttp().getRequest();
-    
+
+    if (request.method === 'OPTIONS') {
+      return true;
+    }
+
     const apiKey = request.headers['x-api-key'];
 
     if (!apiKey || !this.validKeys.has(apiKey)) {

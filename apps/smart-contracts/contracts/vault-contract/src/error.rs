@@ -47,7 +47,7 @@ impl fmt::Display for ContractError {
                 write!(f, "Contract has already been initialized")
             }
             ContractError::InvalidRoiPercentage => {
-                write!(f, "ROI percentage must be between 0 and 1000")
+                write!(f, "ROI percentage must be between 0 and 100")
             }
             ContractError::EnabledFlagNotFound => {
                 write!(f, "Enabled flag not found in storage")

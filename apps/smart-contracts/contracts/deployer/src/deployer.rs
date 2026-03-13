@@ -27,7 +27,7 @@ pub struct DeployAllParams {
     pub escrow_contract: Address,
     pub vault_admin: Address,
     pub vault_enabled: bool,
-    pub roi_percentage: i128,
+    pub roi_percentage: u32,
     pub usdc: Address,
     pub token_sale_admin: Address,
     pub hard_cap: i128,
@@ -163,7 +163,7 @@ impl DeployerContract {
         salt: BytesN<32>,
         vault_admin: Address,
         enabled: bool,
-        roi_percentage: i128,
+        roi_percentage: u32,
         token: Address,
         usdc: Address,
     ) -> Address {

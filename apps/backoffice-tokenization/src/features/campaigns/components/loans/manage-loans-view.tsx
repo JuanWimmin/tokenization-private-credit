@@ -39,7 +39,7 @@ import {
 import { useEscrowContext } from "@tokenization/tw-blocks-shared/src/providers/EscrowProvider";
 import { useChangeMilestoneStatus } from "@tokenization/tw-blocks-shared/src/escrows/single-multi-release/change-milestone-status/dialog/useChangeMilestoneStatus";
 import { numericInputKeyDown, parseNumericInput } from "@/lib/numeric-input";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, fromStroops } from "@/lib/utils";
 
 const addMilestoneSchema = z.object({
   description: z.string().min(1, "La descripción es obligatoria"),
@@ -245,7 +245,7 @@ export function ManageLoansView({ contractId }: ManageLoansViewProps) {
           milestones.map((milestone, index) => {
             const isApproved = milestone.flags?.approved === true;
             const isReleased = milestone.flags?.released === true;
-            const milestoneAmount = Number(milestone.amount || 0);
+            const milestoneAmount = fromStroops(milestone.amount || 0);
             const insufficientFunds = escrowBalance < milestoneAmount;
 
 

@@ -32,7 +32,7 @@ export type Campaign = {
   description: string;
   status: CampaignStatus;
   loansCompleted: number;
-  minInvestCents: number;
+  investedAmount: number;
   currency: string;
   vaultId: string | null;
 };

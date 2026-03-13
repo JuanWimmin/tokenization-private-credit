@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { randomBytes } from 'crypto';
 import { SorobanService } from '../soroban/soroban.service';
+import { toMicroUSDC } from '../common/utils/micro-usdc';
 import { DeployAllDto } from './dto/deploy-all.dto';
 import { DeployParticipationTokenDto } from './dto/deploy-participation-token.dto';
 import { DeployTokenSaleDto } from './dto/deploy-token-sale.dto';
@@ -44,8 +45,8 @@ export class DeployService {
       {
         escrow_contract: dto.escrowContractId,
         admin: dto.admin,
-        hard_cap: dto.hardCap,
-        max_per_investor: dto.maxPerInvestor,
+        hard_cap: toMicroUSDC(dto.hardCap),
+        max_per_investor: toMicroUSDC(dto.maxPerInvestor),
       },
       dto.callerPublicKey,
     );
@@ -75,8 +76,8 @@ export class DeployService {
           decimal: TOKEN_DECIMAL,
           escrow_contract: dto.escrowContract,
           escrow_id: dto.escrowId,
-          hard_cap: dto.hardCap,
-          max_per_investor: dto.maxPerInvestor,
+          hard_cap: toMicroUSDC(dto.hardCap),
+          max_per_investor: toMicroUSDC(dto.maxPerInvestor),
           participation_salt: randomBytes(32),
           roi_percentage: dto.roiPercentage,
           token_name: dto.tokenName,

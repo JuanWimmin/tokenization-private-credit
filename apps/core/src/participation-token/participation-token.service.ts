@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { toMicroUSDC } from '../common/utils/micro-usdc';
 import { SorobanService } from '../soroban/soroban.service';
 import { MintDto } from './dto/mint.dto';
 import { SetAdminDto } from './dto/set-admin.dto';
@@ -18,7 +19,7 @@ export class ParticipationTokenService {
     return this.soroban.buildContractCallTransaction(
       dto.contractId,
       'mint',
-      { to: dto.to, amount: dto.amount },
+      { to: dto.to, amount: toMicroUSDC(dto.amount) },
       dto.callerPublicKey,
     );
   }
@@ -39,7 +40,7 @@ export class ParticipationTokenService {
       {
         from: dto.from,
         spender: dto.spender,
-        amount: dto.amount,
+        amount: toMicroUSDC(dto.amount),
         expiration_ledger: dto.expirationLedger,
       },
       dto.callerPublicKey,
@@ -50,7 +51,7 @@ export class ParticipationTokenService {
     return this.soroban.buildContractCallTransaction(
       dto.contractId,
       'transfer',
-      { from: dto.from, to_muxed: dto.to, amount: dto.amount },
+      { from: dto.from, to_muxed: dto.to, amount: toMicroUSDC(dto.amount) },
       dto.callerPublicKey,
     );
   }
@@ -63,7 +64,7 @@ export class ParticipationTokenService {
         spender: dto.spender,
         from: dto.from,
         to: dto.to,
-        amount: dto.amount,
+        amount: toMicroUSDC(dto.amount),
       },
       dto.callerPublicKey,
     );
@@ -73,7 +74,7 @@ export class ParticipationTokenService {
     return this.soroban.buildContractCallTransaction(
       dto.contractId,
       'burn',
-      { from: dto.from, amount: dto.amount },
+      { from: dto.from, amount: toMicroUSDC(dto.amount) },
       dto.callerPublicKey,
     );
   }
@@ -85,7 +86,7 @@ export class ParticipationTokenService {
       {
         spender: dto.spender,
         from: dto.from,
-        amount: dto.amount,
+        amount: toMicroUSDC(dto.amount),
       },
       dto.callerPublicKey,
     );

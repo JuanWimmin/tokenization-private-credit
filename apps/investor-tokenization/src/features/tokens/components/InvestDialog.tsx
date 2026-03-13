@@ -31,6 +31,8 @@ import { createInvestment } from "@/features/investments/services/investment.ser
 import { MultiReleaseMilestone } from "@trustless-work/escrow";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { fromStroops } from "@/utils/adjustedAmounts";
+import axios from "axios";
 
 type InvestFormValues = {
   amount: number;
@@ -39,6 +41,8 @@ type InvestFormValues = {
 interface InvestDialogProps {
   tokenSaleContractId: string;
   triggerLabel?: string;
+  expectedReturn?: number;
+  loanDuration?: number;
 }
 
 const DEFAULT_USDC_ADDRESS = process.env.NEXT_PUBLIC_DEFAULT_USDC_ADDRESS ?? "";
@@ -46,6 +50,8 @@ const DEFAULT_USDC_ADDRESS = process.env.NEXT_PUBLIC_DEFAULT_USDC_ADDRESS ?? "";
 export function InvestDialog({
   tokenSaleContractId,
   triggerLabel = "Invest",
+  expectedReturn = 8.5,
+  loanDuration = 12,
 }: InvestDialogProps) {
   const { walletAddress } = useWalletContext();
   const [open, setOpen] = React.useState(false);
@@ -77,6 +83,27 @@ export function InvestDialog({
     setSubmitting(true);
 
     try {
+      // Ensure USDC trustline exists before buying
+      const trustlineRes = await axios.post("/api/trustline/add", {
+        address: walletAddress,
+      });
+
+      if (trustlineRes.data?.success && trustlineRes.data?.xdr) {
+        const signedTrustlineTx = await signTransaction({
+          unsignedTransaction: trustlineRes.data.xdr,
+          address: walletAddress,
+        });
+        const sender = new SendTransactionService();
+        const trustlineResult = await sender.sendTransaction({
+          signedXdr: signedTrustlineTx,
+        });
+        if (trustlineResult.status !== "SUCCESS") {
+          throw new Error(
+            trustlineResult.message ?? "Failed to add USDC trustline.",
+          );
+        }
+      }
+
       const tokenService = new TokenService();
 
       const payload: BuyTokenPayload = {
@@ -170,19 +197,18 @@ export function InvestDialog({
 
     const milestones = selected.escrow.milestones as MultiReleaseMilestone[];
 
-    return milestones.reduce((acc, milestone) => acc + milestone.amount, 0);
+    return milestones.reduce((acc, milestone) => acc + fromStroops(milestone.amount ?? 0), 0);
   }, [selected.escrow?.milestones]);
 
   const currency = selected.escrow?.trustline?.symbol ?? "USDC";
 
-  const YIELD_RATE = 0.085;
-  const TERM_MONTHS = 12;
+  const yieldRate = expectedReturn / 100;
   const watchedAmount = form.watch("amount");
   const safeAmount =
     typeof watchedAmount === "number" && !Number.isNaN(watchedAmount) && watchedAmount > 0
       ? watchedAmount
       : 0;
-  const estimatedReturn = safeAmount * YIELD_RATE;
+  const estimatedReturn = safeAmount * yieldRate;
   const totalAtMaturity = safeAmount + estimatedReturn;
 
   const isSubmitDisabled =
@@ -262,7 +288,7 @@ export function InvestDialog({
                     Estimated Yield
                   </span>
                   <p className="mt-1 text-lg font-bold text-teal-600">
-                    8.5% APY
+                    {expectedReturn}% APY
                   </p>
                 </div>
                 <div className="rounded-xl border bg-muted/30 px-4 py-3">
@@ -270,7 +296,7 @@ export function InvestDialog({
                     Term Length
                   </span>
                   <p className="mt-1 text-lg font-bold text-foreground">
-                    12 Months
+                    {loanDuration} Months
                   </p>
                 </div>
               </div>
@@ -284,7 +310,7 @@ export function InvestDialog({
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-muted-foreground">
-                    Estimated return ({(YIELD_RATE * 100).toFixed(1)}% &times; {TERM_MONTHS}mo)
+                    Estimated return ({expectedReturn}% &times; {loanDuration}mo)
                   </span>
                   <span className="text-sm font-semibold text-teal-600">
                     +{estimatedReturn.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {currency}

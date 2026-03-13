@@ -1,7 +1,6 @@
 import type { Campaign } from "@/features/campaigns/types/campaign.types";
 
-const CORE_API =
-  process.env.NEXT_PUBLIC_CORE_API_URL ?? "http://localhost:4000";
+const CORE_API = "/core-api";
 
 const API_KEY = process.env.NEXT_PUBLIC_CORE_API_KEY ?? "";
 

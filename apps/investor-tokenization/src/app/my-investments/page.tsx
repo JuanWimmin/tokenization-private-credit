@@ -21,22 +21,23 @@ function toCampaign(inv: InvestmentFromApi): Campaign {
     description: inv.campaign.description ?? "",
     status: inv.campaign.status as CampaignStatus,
     loansCompleted: 0,
-    minInvestCents: Number(inv.usdcAmount) * 100,
-    currency: "USD",
+    investedAmount: Number(inv.usdcAmount),
+    currency: "USDC",
     vaultId: inv.campaign.vaultId ?? null,
   };
 }
 
-function deduplicateByCampaign(investments: InvestmentFromApi[]): Campaign[] {
-  const seen = new Set<string>();
-  const campaigns: Campaign[] = [];
+function aggregateByCampaign(investments: InvestmentFromApi[]): Campaign[] {
+  const map = new Map<string, Campaign>();
   for (const inv of investments) {
-    if (!seen.has(inv.campaign.id)) {
-      seen.add(inv.campaign.id);
-      campaigns.push(toCampaign(inv));
+    const existing = map.get(inv.campaign.id);
+    if (existing) {
+      existing.investedAmount += Number(inv.usdcAmount);
+    } else {
+      map.set(inv.campaign.id, toCampaign(inv));
     }
   }
-  return campaigns;
+  return Array.from(map.values());
 }
 
 export default function MyInvestmentsPage() {
@@ -46,7 +47,7 @@ export default function MyInvestmentsPage() {
   const { walletAddress } = useWalletContext();
 
   const campaigns = useMemo(
-    () => deduplicateByCampaign(investments ?? []),
+    () => aggregateByCampaign(investments ?? []),
     [investments],
   );
 

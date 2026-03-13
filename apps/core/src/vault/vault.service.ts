@@ -18,6 +18,7 @@ export class VaultService {
       'availability_for_exchange',
       { enabled: dto.enabled },
       dto.callerPublicKey,
+      'vault',
     );
 
     if (dto.enabled && dto.campaignId) {
@@ -34,60 +35,45 @@ export class VaultService {
     return this.soroban.buildContractCallTransaction(
       dto.contractId,
       'claim',
-      {
-        beneficiary: dto.beneficiary,
-      },
+      { beneficiary: dto.beneficiary },
       dto.callerPublicKey,
+      'vault',
     );
   }
 
   getOverview(contractId: string, callerPublicKey: string): Promise<unknown> {
-    return this.soroban.readContractState(
-      contractId,
-      'get_vault_overview',
-      {},
-      callerPublicKey,
-    );
+    return this.soroban.readContractState(contractId, 'get_vault_overview', {}, callerPublicKey, 'vault');
   }
 
-  previewClaim(
-    contractId: string,
-    beneficiary: string,
-    callerPublicKey: string,
-  ): Promise<unknown> {
-    return this.soroban.readContractState(
-      contractId,
-      'preview_claim',
-      { beneficiary },
-      callerPublicKey,
-    );
+  previewClaim(contractId: string, beneficiary: string, callerPublicKey: string): Promise<unknown> {
+    return this.soroban.readContractState(contractId, 'preview_claim', { beneficiary }, callerPublicKey, 'vault');
   }
 
   isEnabled(contractId: string, callerPublicKey: string): Promise<unknown> {
-    return this.soroban.readContractState(contractId, 'is_enabled', {}, callerPublicKey);
+    return this.soroban.readContractState(contractId, 'is_enabled', {}, callerPublicKey, 'vault');
   }
 
   getUsdcBalance(contractId: string, callerPublicKey: string): Promise<unknown> {
-    return this.soroban.readContractState(contractId, 'get_vault_usdc_balance', {}, callerPublicKey);
+    return this.soroban.readContractState(contractId, 'get_vault_usdc_balance', {}, callerPublicKey, 'vault');
   }
 
   getTotalTokensRedeemed(contractId: string, callerPublicKey: string): Promise<unknown> {
-    return this.soroban.readContractState(contractId, 'get_total_tokens_redeemed', {}, callerPublicKey);
+    return this.soroban.readContractState(contractId, 'get_total_tokens_redeemed', {}, callerPublicKey, 'vault');
   }
 
   getAdmin(contractId: string, callerPublicKey: string): Promise<unknown> {
-    return this.soroban.readContractState(contractId, 'get_admin', {}, callerPublicKey);
+    return this.soroban.readContractState(contractId, 'get_admin', {}, callerPublicKey, 'vault');
   }
 
   getRoiPercentage(contractId: string, callerPublicKey: string): Promise<unknown> {
-    return this.soroban.readContractState(contractId, 'get_roi_percentage', {}, callerPublicKey);
+    return this.soroban.readContractState(contractId, 'get_roi_percentage', {}, callerPublicKey, 'vault');
   }
 
   getTokenAddress(contractId: string, callerPublicKey: string): Promise<unknown> {
-    return this.soroban.readContractState(contractId, 'get_token_address', {}, callerPublicKey);
+    return this.soroban.readContractState(contractId, 'get_token_address', {}, callerPublicKey, 'vault');
   }
 
   getUsdcAddress(contractId: string, callerPublicKey: string): Promise<unknown> {
-    return this.soroban.readContractState(contractId, 'get_usdc_address', {}, callerPublicKey);
+    return this.soroban.readContractState(contractId, 'get_usdc_address', {}, callerPublicKey, 'vault');
   }
 }

@@ -2,79 +2,32 @@ use soroban_sdk::{contract, contractimpl, panic_with_error, token, Address, Env}
 use token::Client as TokenClient;
 
 use crate::error::ContractError;
-use crate::events::{AvailabilityChangedEvent, ClaimEvent};
+use crate::events::{AvailabilityChangedEvent, ClaimEvent, RoiPercentageChangedEvent};
 use crate::storage_types::{DataKey, INSTANCE_BUMP_AMOUNT, INSTANCE_LIFETIME_THRESHOLD};
 use crate::types::{ClaimPreview, VaultOverview};
+use crate::helper::{calculate_usdc_amount, get_required};
 
 #[contract]
 pub struct VaultContract;
 
-/// Calculates USDC payout: token_balance * (100 + roi_percentage) / 100
-/// Returns Err on overflow.
-fn calculate_usdc_amount(
-    token_balance: i128,
-    roi_percentage: i128,
-) -> Result<i128, ContractError> {
-    let rate = 100_i128
-        .checked_add(roi_percentage)
-        .ok_or(ContractError::ArithmeticOverflow)?;
-    let numerator = token_balance
-        .checked_mul(rate)
-        .ok_or(ContractError::ArithmeticOverflow)?;
-    numerator
-        .checked_div(100)
-        .ok_or(ContractError::ArithmeticOverflow)
-}
-
-/// Helper to read a required value from instance storage.
-fn get_required<T: soroban_sdk::TryFromVal<Env, soroban_sdk::Val>>(
-    env: &Env,
-    key: &DataKey,
-) -> Result<T, ContractError> {
-    env.storage()
-        .instance()
-        .get(key)
-        .ok_or(ContractError::NotInitialized)
-}
-
 #[contractimpl]
 impl VaultContract {
     // ============ Constructor ============
-
-    /// Initializes the vault contract with the given parameters.
-    ///
-    /// # Trust Assumptions
-    /// The deployer is responsible for providing correct and trusted addresses.
-    /// These addresses are **immutable** after deployment — there are no setters.
-    ///
-    /// * `token` must be the participation token contract deployed by the token factory.
-    /// * `usdc` must be the canonical USDC Stellar Asset Contract on the target network.
-    /// * `admin` must be a secure, controlled address (ideally a multisig).
-    ///
-    /// Providing incorrect addresses will render the vault permanently non-functional.
-    /// See `docs/VAULT_SECURITY.md` for the full deployment checklist.
-    ///
     /// # Arguments
     /// * `admin` - The address that will control vault availability
     /// * `enabled` - Initial state of whether claiming is enabled
-    /// * `roi_percentage` - The ROI percentage (e.g., 5 for 5% return). Must be 0..=1000.
+    /// * `roi_percentage` - The ROI percentage (e.g., 5 for 5% return). Must be 0..=100.
     /// * `token` - The participation token contract address (must be trusted)
-    /// * `usdc` - The USDC stablecoin contract address (must be trusted)
-    ///
-    /// # Panics
-    /// * `AlreadyInitialized` - If the contract has already been initialized
-    /// * `InvalidRoiPercentage` - If roi_percentage is negative or > 1000
-    /// * `TokenAndUsdcCannotBeSame` - If token and USDC addresses are identical
-    /// * `InvalidAddressConfiguration` - If admin equals token or USDC address
+    /// * `usdc` - The USDC stablecoin contract address (must be trusted
     pub fn __constructor(
         env: Env,
         admin: Address,
         enabled: bool,
-        roi_percentage: i128,
+        roi_percentage: u32,
         token: Address,
         usdc: Address,
     ) {
-        const ROI_MAX: i128 = 1000;
+        const ROI_MAX: u32 = 100;
         let already_initialized: bool = env
             .storage()
             .instance()
@@ -84,7 +37,7 @@ impl VaultContract {
             panic_with_error!(&env, ContractError::AlreadyInitialized);
         }
 
-        if roi_percentage < 0 || roi_percentage > ROI_MAX {
+        if roi_percentage > ROI_MAX {
             panic_with_error!(&env, ContractError::InvalidRoiPercentage);
         }
         if token == usdc {
@@ -141,25 +94,48 @@ impl VaultContract {
         Ok(())
     }
 
+    /// Updates the ROI percentage. Only callable by the admin.
+    ///
+    /// # Arguments
+    /// * `new_roi_percentage` - The new ROI percentage. Must be 0..=100.
+    pub fn update_roi_porcentage(
+        env: Env,
+        new_roi_percentage: u32,
+    ) -> Result<(), ContractError> {
+        env.storage()
+            .instance()
+            .extend_ttl(INSTANCE_LIFETIME_THRESHOLD, INSTANCE_BUMP_AMOUNT);
+
+        let stored_admin: Address = get_required(&env, &DataKey::Admin)?;
+        stored_admin.require_auth();
+
+        const ROI_MAX: u32 = 100;
+        if new_roi_percentage > ROI_MAX {
+            panic_with_error!(&env, ContractError::InvalidRoiPercentage);
+        }
+
+        let old_roi_percentage: u32 = get_required(&env, &DataKey::RoiPercentage)?;
+
+        env.storage()
+            .instance()
+            .set(&DataKey::RoiPercentage, &new_roi_percentage);
+
+        RoiPercentageChangedEvent {
+            admin: stored_admin,
+            old_roi_percentage,
+            new_roi_percentage,
+        }
+        .publish(&env);
+
+        Ok(())
+    }
+
     // ============ Claim Function ============
 
     /// Claims ROI for the beneficiary by exchanging their participation tokens for USDC.
     /// The beneficiary receives their tokens' value plus the ROI percentage.
-    ///
-    /// Formula: usdc_amount = token_balance * (100 + roi_percentage) / 100
-    ///
     /// # Arguments
     /// * `beneficiary` - The address claiming their ROI (must have tokens)
-    ///
-    /// # Errors
-    /// * `EnabledNotFound` - If enabled flag is not set in storage
-    /// * `ExchangeIsCurrentlyDisabled` - If vault is disabled
-    /// * `RoiPercentageNotFound` - If ROI percentage is not set in storage
-    /// * `TokenAddressNotFound` - If token address is not set in storage
-    /// * `BeneficiaryHasNoTokensToClaim` - If beneficiary has zero tokens
-    /// * `UsdcAddressNotFound` - If USDC address is not set in storage
-    /// * `VaultDoesNotHaveEnoughUSDC` - If vault cannot cover the claim
-    /// * `ArithmeticOverflow` - If total tokens redeemed overflows
     pub fn claim(env: Env, beneficiary: Address) -> Result<(), ContractError> {
         beneficiary.require_auth();
 
@@ -177,7 +153,7 @@ impl VaultContract {
             return Err(ContractError::ExchangeIsCurrentlyDisabled);
         }
 
-        let roi_percentage: i128 = env
+        let roi_percentage: u32 = env
             .storage()
             .instance()
             .get(&DataKey::RoiPercentage)
@@ -265,7 +241,7 @@ impl VaultContract {
     }
 
     /// Returns the ROI percentage (e.g., 5 means 5% return).
-    pub fn get_roi_percentage(env: Env) -> Result<i128, ContractError> {
+    pub fn get_roi_percentage(env: Env) -> Result<u32, ContractError> {
         env.storage()
             .instance()
             .extend_ttl(INSTANCE_LIFETIME_THRESHOLD, INSTANCE_BUMP_AMOUNT);
@@ -329,14 +305,11 @@ impl VaultContract {
     ///
     /// # Arguments
     /// * `beneficiary` - The address to preview the claim for
-    ///
-    /// # Returns
-    /// A `Result<ClaimPreview, ContractError>` with all relevant claim information
     pub fn preview_claim(env: Env, beneficiary: Address) -> Result<ClaimPreview, ContractError> {
         env.storage()
             .instance()
             .extend_ttl(INSTANCE_LIFETIME_THRESHOLD, INSTANCE_BUMP_AMOUNT);
-        let roi_percentage: i128 = env
+        let roi_percentage: u32 = env
             .storage()
             .instance()
             .get(&DataKey::RoiPercentage)
@@ -405,7 +378,7 @@ impl VaultContract {
             .get(&DataKey::Enabled)
             .ok_or(ContractError::EnabledFlagNotFound)?;
 
-        let roi_percentage: i128 = env
+        let roi_percentage: u32 = env
             .storage()
             .instance()
             .get(&DataKey::RoiPercentage)

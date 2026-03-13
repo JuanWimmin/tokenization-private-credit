@@ -102,7 +102,7 @@ fn test_deploy_vault_contract() {
     let salt = BytesN::from_array(&env, &[3u8; 32]);
 
     let vault_addr =
-        deployer.deploy_vault_contract(&salt, &vault_admin, &true, &5i128, &token, &usdc);
+        deployer.deploy_vault_contract(&salt, &vault_admin, &true, &5u32, &token, &usdc);
 
     assert_ne!(vault_addr, admin);
 }
@@ -135,7 +135,7 @@ fn test_deploy_all() {
             escrow_contract,
             vault_admin,
             vault_enabled: true,
-            roi_percentage: 5i128,
+            roi_percentage: 5u32,
             usdc,
             token_sale_admin,
             hard_cap: 1_000_000i128,

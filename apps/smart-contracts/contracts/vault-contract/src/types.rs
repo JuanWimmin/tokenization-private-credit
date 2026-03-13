@@ -10,7 +10,7 @@ pub struct VaultOverview {
     /// Whether claiming is currently enabled
     pub enabled: bool,
     /// The ROI percentage (e.g., 5 = 5% return on investment)
-    pub roi_percentage: i128,
+    pub roi_percentage: u32,
     /// The participation token contract address
     pub token_address: Address,
     /// The USDC stablecoin contract address

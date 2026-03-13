@@ -10,6 +10,7 @@ export interface CampaignCardProps {
   footer?: ReactNode;
   progress?: { label: string; value: number };
   className?: string;
+  children?: ReactNode;
 }
 
 export function CampaignCard({
@@ -20,6 +21,7 @@ export function CampaignCard({
   footer,
   progress,
   className,
+  children,
 }: CampaignCardProps) {
   return (
     <div
@@ -44,6 +46,8 @@ export function CampaignCard({
       <p className="text-sm text-text-secondary leading-relaxed line-clamp-2">
         {description}
       </p>
+
+      {children}
 
       <div className="flex items-end justify-between gap-4 pt-1">
         {footer && <div className="flex items-center gap-2">{footer}</div>}

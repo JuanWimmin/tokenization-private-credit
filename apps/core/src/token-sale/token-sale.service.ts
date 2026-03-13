@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+  import { toMicroUSDC } from '../common/utils/micro-usdc';
 import { SorobanService } from '../soroban/soroban.service';
 import { BuyDto } from './dto/buy.dto';
 import { UpdateCapsDto } from './dto/update-caps.dto';
@@ -19,9 +20,10 @@ export class TokenSaleService {
         usdc: dto.usdcAddress,
         payer: dto.payer,
         beneficiary: dto.beneficiary,
-        amount: dto.amount,
+        amount: toMicroUSDC(dto.amount),
       },
       dto.callerPublicKey,
+      'token-sale',
     );
   }
 
@@ -30,10 +32,11 @@ export class TokenSaleService {
       dto.contractId,
       'update_caps',
       {
-        new_hard_cap: dto.newHardCap,
-        new_max_per_investor: dto.newMaxPerInvestor,
+        new_hard_cap: toMicroUSDC(dto.newHardCap),
+        new_max_per_investor: toMicroUSDC(dto.newMaxPerInvestor),
       },
       dto.callerPublicKey,
+      'token-sale',
     );
   }
 
@@ -43,6 +46,7 @@ export class TokenSaleService {
       'set_token',
       { new_token: dto.newToken },
       dto.callerPublicKey,
+      'token-sale',
     );
   }
 
@@ -52,12 +56,13 @@ export class TokenSaleService {
       'set_admin',
       { new_admin: dto.newAdmin },
       dto.callerPublicKey,
+      'token-sale',
     );
   }
 
   // ── Reads ──
 
   getAdmin(contractId: string, callerPublicKey: string): Promise<unknown> {
-    return this.soroban.readContractState(contractId, 'get_admin', {}, callerPublicKey);
+    return this.soroban.readContractState(contractId, 'get_admin', {}, callerPublicKey, 'token-sale');
   }
 }

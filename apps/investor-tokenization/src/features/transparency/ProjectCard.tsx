@@ -5,7 +5,7 @@ import { Badge } from "@tokenization/ui/badge";
 import { Button } from "@tokenization/ui/button";
 import { CampaignCard as SharedCampaignCard } from "@tokenization/ui/campaign-card";
 import { cn } from "@tokenization/shared/lib/utils";
-import { ExternalLink, Rocket } from "lucide-react";
+import { CheckCircle, Circle, ExternalLink, Rocket } from "lucide-react";
 import type {
   GetEscrowsFromIndexerResponse as Escrow,
   MultiReleaseMilestone,
@@ -14,6 +14,7 @@ import { InvestDialog } from "@/features/tokens/components/InvestDialog";
 import { SelectedEscrowProvider } from "@/features/tokens/context/SelectedEscrowContext";
 import { CAMPAIGN_STATUS_CONFIG } from "@/features/roi/constants/campaign-status";
 import type { CampaignFromApi } from "./types";
+import { fromStroops } from "@/utils/adjustedAmounts";
 
 export type ProjectCardProps = {
   campaign: CampaignFromApi;
@@ -69,6 +70,9 @@ export const ProjectCard = ({
   const progress = getProgress(escrow);
   const statusCfg = CAMPAIGN_STATUS_CONFIG[status];
   const escrowExplorerUrl = `https://stellar.expert/explorer/testnet/contract/${escrowId}`;
+  const milestones = (escrow?.milestones ?? []) as MultiReleaseMilestone[];
+  const assigned = milestones.reduce((sum, m) => sum + fromStroops(m.amount ?? 0), 0);
+  const poolSize = campaign.poolSize ?? 0;
 
   if (isLoading) {
     return <LoadingSkeleton />;
@@ -99,6 +103,8 @@ export const ProjectCard = ({
             <InvestDialog
               tokenSaleContractId={tokenSaleId}
               triggerLabel="Invest"
+              expectedReturn={campaign.expectedReturn}
+              loanDuration={campaign.loanDuration}
             />
           </SelectedEscrowProvider>
         ) : (
@@ -109,18 +115,44 @@ export const ProjectCard = ({
         )
       }
       footer={
-        <Button
-          variant="ghost"
-          className="flex items-center gap-1 text-xs font-semibold text-primary hover:text-primary/80 transition-colors cursor-pointer"
-          asChild
-        >
-          <Link href={escrowExplorerUrl} target="_blank" rel="noopener noreferrer">
-            See Escrow
-            <ExternalLink className="size-3" />
-          </Link>
-        </Button>
+        <div className="flex flex-col gap-1">
+          <span className="text-xs font-bold text-foreground">
+            USDC {assigned.toLocaleString("en-US", { minimumFractionDigits: 2 })} / USDC {poolSize.toLocaleString("en-US", { minimumFractionDigits: 2 })}
+          </span>
+          {campaign.vaultId && (
+            <span className="text-[10px] text-muted-foreground font-mono truncate" title={campaign.vaultId}>
+              Vault: {campaign.vaultId.slice(0, 8)}...{campaign.vaultId.slice(-4)}
+            </span>
+          )}
+          <Button
+            variant="ghost"
+            className="flex items-center gap-1 text-xs font-semibold text-primary hover:text-primary/80 transition-colors cursor-pointer p-0 h-auto"
+            asChild
+          >
+            <Link href={escrowExplorerUrl} target="_blank" rel="noopener noreferrer">
+              See Escrow
+              <ExternalLink className="size-3" />
+            </Link>
+          </Button>
+        </div>
       }
       progress={{ label: "Loans Completed", value: progress }}
-    />
+    >
+      {milestones.length > 0 ? (
+        <ul className="flex flex-col gap-1">
+          {milestones.map((m, i) => (
+            <li key={i} className="flex items-center gap-2 text-xs text-muted-foreground">
+              {m.status === "Approved" ? (
+                <CheckCircle className="size-3.5 text-green-500 shrink-0" />
+              ) : (
+                <Circle className="size-3.5 shrink-0" />
+              )}
+              <span className="truncate">{m.description || `Milestone ${i + 1}`}</span>
+              <span className="ml-auto font-medium">{fromStroops(m.amount ?? 0).toLocaleString("en-US", { minimumFractionDigits: 2 })} USDC</span>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+    </SharedCampaignCard>
   );
 };

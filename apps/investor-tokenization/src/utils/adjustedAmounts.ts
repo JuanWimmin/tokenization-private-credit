@@ -14,3 +14,8 @@ export function adjustPricesToMicroUSDC(price: number): string {
 
   return rounded.toFixed(0);
 }
+
+export function fromStroops(stroops: number | string): number {
+  const val = new Decimal(String(stroops));
+  return val.div(USDC_DECIMAL_SCALE).toNumber();
+}

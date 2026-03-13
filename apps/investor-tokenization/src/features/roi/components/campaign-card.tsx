@@ -18,13 +18,14 @@ interface CampaignCardProps {
 }
 
 export function CampaignCard({ campaign, onClaimRoi }: CampaignCardProps) {
-  const { title, description, status, id, loansCompleted } = campaign;
+  const { title, description, status, id, loansCompleted, investedAmount, currency } = campaign;
   const statusCfg = CAMPAIGN_STATUS_CONFIG[status];
+  const formattedInvested = investedAmount.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
   return (
     <SharedCampaignCard
       title={`#${id.slice(0, 3).toUpperCase()} ${title}`}
-      description={description}
+      description={`${description} | Invested: ${formattedInvested} ${currency}`}
       statusBadge={
         <Badge
           variant="outline"
@@ -34,14 +35,16 @@ export function CampaignCard({ campaign, onClaimRoi }: CampaignCardProps) {
         </Badge>
       }
       actions={
-        <Button
-          size="sm"
-          className="cursor-pointer gap-1.5"
-          onClick={() => onClaimRoi?.(id)}
-        >
-          <FileText className="size-3.5" />
-          Claim ROI
-        </Button>
+        status === "CLAIMABLE" ? (
+          <Button
+            size="sm"
+            className="cursor-pointer gap-1.5"
+            onClick={() => onClaimRoi?.(id)}
+          >
+            <FileText className="size-3.5" />
+            Claim ROI
+          </Button>
+        ) : null
       }
       footer={
         <Button

@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { VaultService } from './vault.service';
 import { SorobanService } from '../soroban/soroban.service';
+import { PrismaService } from '../prisma/prisma.service';
 
 describe('VaultService', () => {
   let service: VaultService;
@@ -19,6 +20,7 @@ describe('VaultService', () => {
       providers: [
         VaultService,
         { provide: SorobanService, useValue: soroban },
+        { provide: PrismaService, useValue: { campaign: { update: jest.fn() } } },
       ],
     }).compile();
 
@@ -42,8 +44,9 @@ describe('VaultService', () => {
       expect(soroban.buildContractCallTransaction).toHaveBeenCalledWith(
         'vault-1',
         'availability_for_exchange',
-        { admin: '0xADMIN', enabled: true },
+        { enabled: true },
         '0xCALLER',
+        'vault',
       );
     });
   });
@@ -64,6 +67,7 @@ describe('VaultService', () => {
         'claim',
         { beneficiary: '0xBENEFICIARY' },
         '0xCALLER',
+        'vault',
       );
     });
   });
@@ -78,6 +82,7 @@ describe('VaultService', () => {
         'get_vault_overview',
         {},
         '0xCALLER',
+        'vault',
       );
     });
   });
@@ -88,6 +93,7 @@ describe('VaultService', () => {
         'vault-1',
         '0xBENEFICIARY',
         '0xCALLER',
+        'vault',
       );
 
       expect(result).toBe('mock-state');
@@ -96,6 +102,7 @@ describe('VaultService', () => {
         'preview_claim',
         { beneficiary: '0xBENEFICIARY' },
         '0xCALLER',
+        'vault',
       );
     });
   });
@@ -110,6 +117,7 @@ describe('VaultService', () => {
         'is_enabled',
         {},
         '0xCALLER',
+        'vault',
       );
     });
   });
@@ -124,6 +132,7 @@ describe('VaultService', () => {
         'get_vault_usdc_balance',
         {},
         '0xCALLER',
+        'vault',
       );
     });
   });
@@ -138,6 +147,7 @@ describe('VaultService', () => {
         'get_total_tokens_redeemed',
         {},
         '0xCALLER',
+        'vault',
       );
     });
   });
@@ -152,6 +162,7 @@ describe('VaultService', () => {
         'get_admin',
         {},
         '0xCALLER',
+        'vault',
       );
     });
   });
@@ -166,6 +177,7 @@ describe('VaultService', () => {
         'get_roi_percentage',
         {},
         '0xCALLER',
+        'vault',
       );
     });
   });
@@ -180,6 +192,7 @@ describe('VaultService', () => {
         'get_token_address',
         {},
         '0xCALLER',
+        'vault',
       );
     });
   });
@@ -194,6 +207,7 @@ describe('VaultService', () => {
         'get_usdc_address',
         {},
         '0xCALLER',
+        'vault',
       );
     });
   });
