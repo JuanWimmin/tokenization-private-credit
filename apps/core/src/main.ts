@@ -2,6 +2,7 @@ import 'dotenv/config';
 
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
+import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 import { ApiKeyGuard } from './common/guards/api-key.guard';
 
@@ -30,8 +31,18 @@ async function bootstrap() {
   });
   app.useGlobalPipes(new ValidationPipe({ whitelist: true }));
 
+  const config = new DocumentBuilder()
+    .setTitle('Tokenization Private Credit API')
+    .setDescription('Backend API for the tokenization platform — campaigns, investments, loans, deploy, vault, token-sale')
+    .setVersion('1.0')
+    .addApiKey({ type: 'apiKey', name: 'x-api-key', in: 'header' }, 'api-key')
+    .build();
+  const document = SwaggerModule.createDocument(app, config);
+  SwaggerModule.setup('api-docs', app, document);
+
   app.useGlobalGuards(new ApiKeyGuard());
   await app.listen(process.env.PORT ?? 4000);
   console.log(`Core API is running on port ${process.env.PORT ?? 4000}`);
+  console.log(`Swagger docs available at http://localhost:${process.env.PORT ?? 4000}/api-docs`);
 }
 bootstrap();
