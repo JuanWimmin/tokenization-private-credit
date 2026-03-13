@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { WalletButton } from "@tokenization/tw-blocks-shared/src/wallet-kit/WalletButtons";
 import Image from "next/image";
 
 export const Header = () => {
@@ -8,8 +7,6 @@ export const Header = () => {
       <Link href="/">
         <Image src="/favicon.ico" alt="logo" width={50} height={50} />
       </Link>
-
-      <WalletButton />
     </header>
   );
 };

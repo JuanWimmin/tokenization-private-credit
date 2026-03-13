@@ -32,10 +32,7 @@ export class CampaignsController {
   }
 
   @Patch(':id/status')
-  updateStatus(
-    @Param('id') id: string,
-    @Body() dto: UpdateCampaignStatusDto,
-  ) {
+  updateStatus(@Param('id') id: string, @Body() dto: UpdateCampaignStatusDto) {
     return this.campaignsService.updateStatus(id, dto);
   }
 

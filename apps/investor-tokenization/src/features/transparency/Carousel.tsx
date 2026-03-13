@@ -13,6 +13,7 @@ import type {
 import Link from "next/link";
 import { useProjectTokenBalances } from "@/features/investments/hooks/useProjectTokenBalances.hook";
 import { Wallet, ExternalLink } from "lucide-react";
+import { fromStroops } from "@/utils/adjustedAmounts";
 
 export const DummyContent = ({
   details,
@@ -32,7 +33,7 @@ export const DummyContent = ({
   const milestones = (details?.milestones || []) as MultiReleaseMilestone[];
 
   const totalAmount = milestones.reduce(
-    (acc, milestone) => acc + Number(milestone.amount),
+    (acc, milestone) => acc + fromStroops(milestone.amount ?? 0),
     0
   );
 
@@ -203,7 +204,7 @@ export const DummyContent = ({
                         Amount
                       </p>
                       <p className="text-lg font-semibold text-neutral-900 dark:text-white">
-                        {milestone.amount}
+                        {fromStroops(milestone.amount ?? 0).toLocaleString("en-US", { minimumFractionDigits: 2 })}
                       </p>
                     </div>
                   )}

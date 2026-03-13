@@ -2,9 +2,9 @@
 extern crate std;
 
 use crate::error::ContractError;
-use crate::vault::{VaultContract, VaultContractClient};
+use crate::contract::{VaultContract, VaultContractClient};
 use soroban_sdk::{testutils::Address as _, testutils::Events as _, token, Address, Env, String};
-use soroban_token_contract::{Token as FactoryToken, TokenClient as FactoryTokenClient};
+use participation_token::{Token as FactoryToken, TokenClient as FactoryTokenClient};
 use token::Client as TokenClient;
 use token::StellarAssetClient as TokenAdminClient;
 
@@ -17,12 +17,13 @@ fn create_usdc_token<'a>(e: &Env, admin: &Address) -> (TokenClient<'a>, TokenAdm
 }
 
 fn create_token_factory<'a>(e: &Env, mint_authority: &Address) -> FactoryTokenClient<'a> {
+    let escrow_contract = Address::generate(e);
     let token_contract = e.register(
         FactoryToken,
         (
             String::from_str(e, "TestToken"),
             String::from_str(e, "TST"),
-            String::from_str(e, ""),
+            escrow_contract,
             7_u32,
             mint_authority,
         ),
@@ -34,7 +35,7 @@ fn create_vault<'a>(
     e: &Env,
     admin: &Address,
     enabled: bool,
-    roi_percentage: i128,
+    roi_percentage: u32,
     token: &Address,
     usdc: &Address,
 ) -> VaultContractClient<'a> {
@@ -49,6 +50,23 @@ fn create_vault<'a>(
         ),
     );
     VaultContractClient::new(e, &contract_id)
+}
+
+// ============ Constructor Validation Tests ============
+
+
+#[test]
+#[should_panic(expected = "Error(Contract, #9)")]
+fn test_constructor_rejects_roi_percentage_over_max() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let admin = Address::generate(&env);
+    let token_admin = Address::generate(&env);
+    let (usdc_client, _usdc_admin) = create_usdc_token(&env, &admin);
+    let token = create_token_factory(&env, &token_admin);
+
+    let _ = create_vault(&env, &admin, true, 101, &token.address, &usdc_client.address);
 }
 
 // ============ Original Tests (Updated) ============
@@ -67,9 +85,9 @@ fn test_vault_deployment_and_availability() {
 
     let vault = create_vault(&env, &admin, false, 10, &token.address, &usdc_client.address);
 
-    vault.availability_for_exchange(&admin, &true);
+    vault.availability_for_exchange(&true);
 
-    vault.availability_for_exchange(&admin, &false);
+    vault.availability_for_exchange(&false);
 }
 
 #[test]
@@ -199,7 +217,7 @@ fn test_claim_with_6_percent_premium() {
     assert_eq!(usdc_client.balance(&vault.address), 94);
 }
 
-// ============ New Getter Function Tests ============
+// ============ Getter Function Tests ============
 
 #[test]
 fn test_get_admin() {
@@ -237,7 +255,7 @@ fn test_is_enabled() {
     assert_eq!(vault_enabled.is_enabled(), true);
 
     // Test toggling
-    vault_disabled.availability_for_exchange(&admin, &true);
+    vault_disabled.availability_for_exchange(&true);
     assert_eq!(vault_disabled.is_enabled(), true);
 }
 
@@ -524,7 +542,7 @@ fn test_claim_emits_event() {
 
     // Verify event was emitted
     let events = env.events().all();
-    assert!(!events.is_empty(), "Expected claim event to be emitted");
+    assert!(!events.events().is_empty(), "Expected claim event to be emitted");
 }
 
 #[test]
@@ -540,14 +558,121 @@ fn test_availability_change_emits_event() {
 
     let vault = create_vault(&env, &admin, false, 10, &token.address, &usdc_client.address);
 
-    vault.availability_for_exchange(&admin, &true);
+    vault.availability_for_exchange(&true);
 
     // Verify event was emitted
     let events = env.events().all();
     assert!(
-        !events.is_empty(),
+        !events.events().is_empty(),
         "Expected availability changed event to be emitted"
     );
+}
+
+// ============ Constructor Validation Tests ============
+
+#[test]
+#[should_panic(expected = "Error(Contract, #6)")]
+fn test_constructor_rejects_same_token_and_usdc() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let admin = Address::generate(&env);
+    let token_admin = Address::generate(&env);
+
+    let token = create_token_factory(&env, &token_admin);
+
+    // Pass the same address for both token and usdc — should panic
+    create_vault(&env, &admin, true, 10, &token.address, &token.address);
+}
+
+#[test]
+#[should_panic(expected = "Error(Contract, #7)")]
+fn test_constructor_rejects_admin_equals_token() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let token_admin = Address::generate(&env);
+
+    let (usdc_client, _usdc_admin) = create_usdc_token(&env, &token_admin);
+    let token = create_token_factory(&env, &token_admin);
+
+    // Pass token address as admin — should panic
+    create_vault(&env, &token.address, true, 10, &token.address, &usdc_client.address);
+}
+
+#[test]
+#[should_panic(expected = "Error(Contract, #7)")]
+fn test_constructor_rejects_admin_equals_usdc() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let token_admin = Address::generate(&env);
+
+    let (usdc_client, _usdc_admin) = create_usdc_token(&env, &token_admin);
+    let token = create_token_factory(&env, &token_admin);
+
+    // Pass usdc address as admin — should panic
+    create_vault(&env, &usdc_client.address, true, 10, &token.address, &usdc_client.address);
+}
+
+#[test]
+fn test_constructor_accepts_valid_distinct_addresses() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let admin = Address::generate(&env);
+    let token_admin = Address::generate(&env);
+
+    let (usdc_client, _usdc_admin) = create_usdc_token(&env, &admin);
+    let token = create_token_factory(&env, &token_admin);
+
+    // All distinct addresses — should succeed
+    let vault = create_vault(&env, &admin, true, 10, &token.address, &usdc_client.address);
+
+    assert_eq!(vault.get_admin(), admin);
+    assert_eq!(vault.get_token_address(), token.address);
+    assert_eq!(vault.get_usdc_address(), usdc_client.address);
+}
+
+// ============ Input Validation Tests ============
+
+
+#[test]
+fn test_constructor_accepts_zero_roi() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let admin = Address::generate(&env);
+    let token_admin = Address::generate(&env);
+
+    let (usdc_client, _usdc_admin) = create_usdc_token(&env, &admin);
+    let token = create_token_factory(&env, &token_admin);
+
+    // Zero ROI is valid (no profit, just principal return)
+    let vault = create_vault(&env, &admin, true, 0, &token.address, &usdc_client.address);
+    assert_eq!(vault.get_roi_percentage(), 0);
+}
+
+// ============ Re-initialization Protection Tests ============
+
+#[test]
+fn test_constructor_sets_initialized_flag() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let admin = Address::generate(&env);
+    let token_admin = Address::generate(&env);
+
+    let (usdc_client, _usdc_admin) = create_usdc_token(&env, &admin);
+    let token = create_token_factory(&env, &token_admin);
+
+    // First deploy works fine
+    let vault = create_vault(&env, &admin, true, 10, &token.address, &usdc_client.address);
+
+    // Vault is functional after initialization
+    assert_eq!(vault.get_admin(), admin);
+    assert_eq!(vault.is_enabled(), true);
+    assert_eq!(vault.get_roi_percentage(), 10);
 }
 
 // ============ Edge Case Tests ============
@@ -610,4 +735,395 @@ fn test_high_roi_percentage() {
 
     vault.claim(&beneficiary);
     assert_eq!(usdc_client.balance(&beneficiary), 200);
+}
+
+// ============ Constructor Validation Tests (CoKeFish #24) ============
+
+#[test]
+fn test_constructor_accepts_max_roi() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let admin = Address::generate(&env);
+    let token_admin = Address::generate(&env);
+
+    let (usdc_client, _) = create_usdc_token(&env, &admin);
+    let token = create_token_factory(&env, &token_admin);
+
+    let vault = create_vault(&env, &admin, true, 100, &token.address, &usdc_client.address);
+    assert_eq!(vault.get_roi_percentage(), 100);
+}
+
+// ============ Security Tests (#33) ============
+
+#[test]
+fn test_claim_overflow_in_formula() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let admin = Address::generate(&env);
+    let token_admin = Address::generate(&env);
+    let beneficiary = Address::generate(&env);
+
+    let (usdc_client, _) = create_usdc_token(&env, &admin);
+    let token = create_token_factory(&env, &token_admin);
+
+    // Use max ROI (100) and a token balance that causes overflow: token_balance * (100 + roi) overflows i128
+    // token_balance * 200 > i128::MAX when token_balance > i128::MAX / 200
+    let overflow_balance: i128 = i128::MAX / 200 + 1;
+    let vault = create_vault(&env, &admin, true, 100, &token.address, &usdc_client.address);
+
+    token.mint(&beneficiary, &overflow_balance);
+
+    // claim() will compute: overflow_balance * (100 + 100) / 100 which overflows i128 -> returns ArithmeticOverflow
+    let result = vault.try_claim(&beneficiary);
+    assert_eq!(result, Err(Ok(ContractError::ArithmeticOverflow)));
+}
+
+#[test]
+fn test_claim_zero_roi() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let admin = Address::generate(&env);
+    let token_admin = Address::generate(&env);
+    let beneficiary = Address::generate(&env);
+
+    let (usdc_client, usdc_admin) = create_usdc_token(&env, &admin);
+    let token = create_token_factory(&env, &token_admin);
+
+    // 0% ROI — principal only, no profit
+    let vault = create_vault(&env, &admin, true, 0, &token.address, &usdc_client.address);
+
+    token.mint(&beneficiary, &100);
+    usdc_admin.mint(&vault.address, &200);
+
+    vault.claim(&beneficiary);
+
+    assert_eq!(token.balance(&beneficiary), 0);
+    assert_eq!(usdc_client.balance(&beneficiary), 100); // exactly principal
+    assert_eq!(usdc_client.balance(&vault.address), 100);
+}
+
+#[test]
+fn test_double_claim_same_beneficiary() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let admin = Address::generate(&env);
+    let token_admin = Address::generate(&env);
+    let beneficiary = Address::generate(&env);
+
+    let (usdc_client, usdc_admin) = create_usdc_token(&env, &admin);
+    let token = create_token_factory(&env, &token_admin);
+
+    let vault = create_vault(&env, &admin, true, 10, &token.address, &usdc_client.address);
+
+    token.mint(&beneficiary, &100);
+    usdc_admin.mint(&vault.address, &500);
+
+    // First claim succeeds
+    vault.claim(&beneficiary);
+    assert_eq!(usdc_client.balance(&beneficiary), 110);
+    assert_eq!(token.balance(&beneficiary), 0);
+
+    // Second claim fails — tokens already burned
+    let result = vault.try_claim(&beneficiary);
+    assert_eq!(result, Err(Ok(ContractError::BeneficiaryHasNoTokensToClaim)));
+}
+
+#[test]
+#[should_panic]
+fn test_non_admin_cannot_change_availability() {
+    let env = Env::default();
+    // Do NOT mock_all_auths — we want auth to fail for non-admin
+
+    let admin = Address::generate(&env);
+    let _non_admin = Address::generate(&env);
+    let token_admin = Address::generate(&env);
+
+    let (usdc_client, _) = create_usdc_token(&env, &admin);
+    let token = create_token_factory(&env, &token_admin);
+
+    let vault = create_vault(&env, &admin, false, 10, &token.address, &usdc_client.address);
+
+    // Non-admin tries to enable — should fail auth
+    vault.availability_for_exchange(&true);
+}
+
+#[test]
+fn test_claim_exact_vault_balance() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let admin = Address::generate(&env);
+    let token_admin = Address::generate(&env);
+    let beneficiary = Address::generate(&env);
+
+    let (usdc_client, usdc_admin) = create_usdc_token(&env, &admin);
+    let token = create_token_factory(&env, &token_admin);
+
+    // 10% ROI: 100 tokens → 110 USDC
+    let vault = create_vault(&env, &admin, true, 10, &token.address, &usdc_client.address);
+
+    token.mint(&beneficiary, &100);
+    usdc_admin.mint(&vault.address, &110); // exactly enough
+
+    vault.claim(&beneficiary);
+
+    assert_eq!(usdc_client.balance(&beneficiary), 110);
+    assert_eq!(usdc_client.balance(&vault.address), 0); // vault fully drained
+}
+
+#[test]
+fn test_preview_matches_actual_claim() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let admin = Address::generate(&env);
+    let token_admin = Address::generate(&env);
+    let beneficiary = Address::generate(&env);
+
+    let (usdc_client, usdc_admin) = create_usdc_token(&env, &admin);
+    let token = create_token_factory(&env, &token_admin);
+
+    let vault = create_vault(&env, &admin, true, 15, &token.address, &usdc_client.address);
+
+    token.mint(&beneficiary, &200);
+    usdc_admin.mint(&vault.address, &1000);
+
+    // Preview before claim
+    let preview = vault.preview_claim(&beneficiary);
+    assert_eq!(preview.token_balance, 200);
+    assert_eq!(preview.usdc_amount, 230); // 200 * 1.15 = 230
+    assert_eq!(preview.vault_has_sufficient_balance, true);
+    assert_eq!(preview.claim_enabled, true);
+
+    // Actual claim
+    vault.claim(&beneficiary);
+
+    // Verify preview amounts match actual
+    assert_eq!(usdc_client.balance(&beneficiary), preview.usdc_amount);
+    assert_eq!(token.balance(&beneficiary), 0);
+}
+
+#[test]
+fn test_small_amount_truncation() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let admin = Address::generate(&env);
+    let token_admin = Address::generate(&env);
+    let beneficiary = Address::generate(&env);
+
+    let (usdc_client, usdc_admin) = create_usdc_token(&env, &admin);
+    let token = create_token_factory(&env, &token_admin);
+
+    // 1% ROI: 3 tokens → 3 * 101 / 100 = 303 / 100 = 3 (integer division truncates)
+    let vault = create_vault(&env, &admin, true, 1, &token.address, &usdc_client.address);
+
+    token.mint(&beneficiary, &3);
+    usdc_admin.mint(&vault.address, &100);
+
+    let preview = vault.preview_claim(&beneficiary);
+    assert_eq!(preview.usdc_amount, 3); // 303 / 100 = 3 (truncated)
+    assert_eq!(preview.roi_amount, 0); // 3 - 3 = 0 (lost to truncation)
+
+    vault.claim(&beneficiary);
+    assert_eq!(usdc_client.balance(&beneficiary), 3);
+}
+
+#[test]
+fn test_claim_single_token_high_roi() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let admin = Address::generate(&env);
+    let token_admin = Address::generate(&env);
+    let beneficiary = Address::generate(&env);
+
+    let (usdc_client, usdc_admin) = create_usdc_token(&env, &admin);
+    let token = create_token_factory(&env, &token_admin);
+
+    // 50% ROI: 1 token → 1 * 150 / 100 = 1 (truncated)
+    let vault = create_vault(&env, &admin, true, 50, &token.address, &usdc_client.address);
+
+    token.mint(&beneficiary, &1);
+    usdc_admin.mint(&vault.address, &100);
+
+    vault.claim(&beneficiary);
+    assert_eq!(usdc_client.balance(&beneficiary), 1); // 150/100 = 1
+}
+
+#[test]
+fn test_claim_large_token_amount() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let admin = Address::generate(&env);
+    let token_admin = Address::generate(&env);
+    let beneficiary = Address::generate(&env);
+
+    let (usdc_client, usdc_admin) = create_usdc_token(&env, &admin);
+    let token = create_token_factory(&env, &token_admin);
+
+    // 10% ROI with large amounts
+    let vault = create_vault(&env, &admin, true, 10, &token.address, &usdc_client.address);
+
+    let large_amount: i128 = 1_000_000_000_000; // 1 trillion
+    token.mint(&beneficiary, &large_amount);
+    let vault_funds: i128 = 2_000_000_000_000;
+    usdc_admin.mint(&vault.address, &vault_funds);
+
+    vault.claim(&beneficiary);
+
+    // 1_000_000_000_000 * 110 / 100 = 1_100_000_000_000
+    assert_eq!(usdc_client.balance(&beneficiary), 1_100_000_000_000);
+}
+
+// ============ set_roi_percentage Tests ============
+
+#[test]
+fn test_update_roi_porcentage_success() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let admin = Address::generate(&env);
+    let token_admin = Address::generate(&env);
+
+    let (usdc_client, _) = create_usdc_token(&env, &admin);
+    let token = create_token_factory(&env, &token_admin);
+
+    let vault = create_vault(&env, &admin, true, 5, &token.address, &usdc_client.address);
+
+    assert_eq!(vault.get_roi_percentage(), 5);
+    vault.update_roi_porcentage(&20);
+    assert_eq!(vault.get_roi_percentage(), 20);
+}
+
+#[test]
+fn test_update_roi_porcentage_to_zero() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let admin = Address::generate(&env);
+    let token_admin = Address::generate(&env);
+
+    let (usdc_client, _) = create_usdc_token(&env, &admin);
+    let token = create_token_factory(&env, &token_admin);
+
+    let vault = create_vault(&env, &admin, true, 10, &token.address, &usdc_client.address);
+
+    vault.update_roi_porcentage(&0);
+    assert_eq!(vault.get_roi_percentage(), 0);
+}
+
+#[test]
+fn test_update_roi_porcentage_to_max() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let admin = Address::generate(&env);
+    let token_admin = Address::generate(&env);
+
+    let (usdc_client, _) = create_usdc_token(&env, &admin);
+    let token = create_token_factory(&env, &token_admin);
+
+    let vault = create_vault(&env, &admin, true, 5, &token.address, &usdc_client.address);
+
+    vault.update_roi_porcentage(&100);
+    assert_eq!(vault.get_roi_percentage(), 100);
+}
+
+#[test]
+#[should_panic(expected = "Error(Contract, #9)")]
+fn test_update_roi_porcentage_rejects_over_max() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let admin = Address::generate(&env);
+    let token_admin = Address::generate(&env);
+
+    let (usdc_client, _) = create_usdc_token(&env, &admin);
+    let token = create_token_factory(&env, &token_admin);
+
+    let vault = create_vault(&env, &admin, true, 5, &token.address, &usdc_client.address);
+
+    vault.update_roi_porcentage(&101);
+}
+
+
+#[test]
+#[should_panic]
+fn test_update_roi_porcentage_non_admin_rejected() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let admin = Address::generate(&env);
+    let attacker = Address::generate(&env);
+    let token_admin = Address::generate(&env);
+
+    let (usdc_client, _) = create_usdc_token(&env, &admin);
+    let token = create_token_factory(&env, &token_admin);
+
+    let vault = create_vault(&env, &admin, true, 5, &token.address, &usdc_client.address);
+
+    // Remove all mocked auths so attacker cannot authorize
+    env.set_auths(&[]);
+    vault.update_roi_porcentage(&50);
+    let _ = attacker;
+}
+
+#[test]
+fn test_update_roi_porcentage_affects_subsequent_claim() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let admin = Address::generate(&env);
+    let token_admin = Address::generate(&env);
+    let beneficiary = Address::generate(&env);
+
+    let (usdc_client, usdc_admin) = create_usdc_token(&env, &admin);
+    let token = create_token_factory(&env, &token_admin);
+
+    let vault = create_vault(&env, &admin, true, 5, &token.address, &usdc_client.address);
+
+    token.mint(&beneficiary, &100);
+    usdc_admin.mint(&vault.address, &500);
+
+    // Change ROI to 10% before claiming
+    vault.update_roi_porcentage(&10);
+
+    vault.claim(&beneficiary);
+
+    // 100 * (100 + 10) / 100 = 110
+    assert_eq!(usdc_client.balance(&beneficiary), 110);
+}
+
+#[test]
+fn test_enable_disable_enable_then_claim() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let admin = Address::generate(&env);
+    let token_admin = Address::generate(&env);
+    let beneficiary = Address::generate(&env);
+
+    let (usdc_client, usdc_admin) = create_usdc_token(&env, &admin);
+    let token = create_token_factory(&env, &token_admin);
+
+    // Start disabled
+    let vault = create_vault(&env, &admin, false, 5, &token.address, &usdc_client.address);
+
+    token.mint(&beneficiary, &100);
+    usdc_admin.mint(&vault.address, &200);
+
+    // Claim should fail when disabled
+    let result = vault.try_claim(&beneficiary);
+    assert_eq!(result, Err(Ok(ContractError::ExchangeIsCurrentlyDisabled)));
+
+    // Enable → claim should work
+    vault.availability_for_exchange(&true);
+    vault.claim(&beneficiary);
+    assert_eq!(usdc_client.balance(&beneficiary), 105);
 }

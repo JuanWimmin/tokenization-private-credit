@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { ReactQueryClientProvider } from "@tokenization/tw-blocks-shared/src/providers/ReactQueryClientProvider";
 import { TrustlessWorkProvider } from "@tokenization/tw-blocks-shared/src/providers/TrustlessWork";
@@ -9,21 +8,13 @@ import { EscrowAmountProvider } from "@tokenization/tw-blocks-shared/src/provide
 import { Toaster } from "@tokenization/ui/sonner";
 import { WalletProvider } from "@tokenization/tw-blocks-shared/src/wallet-kit/WalletProvider";
 import type { ReactNode } from "react";
-import { Header } from "@/components/shared/Header";
-import { Space_Grotesk } from "next/font/google";
-import localFont from "next/font/local";
+import { Inter } from "next/font/google";
 import { cn } from "@/lib/utils";
 
-const Exo2 = localFont({
-  src: "./fonts/Exo2.ttf",
-  variable: "---exo-2",
-  weight: "100 900",
-  display: "swap",
-});
-
-const spaceGrotesk = Space_Grotesk({
+const inter = Inter({
   subsets: ["latin"],
   display: "swap",
+  variable: "--font-inter",
 });
 
 export const metadata: Metadata = {
@@ -38,30 +29,15 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body
-        className={cn(
-          Exo2.variable,
-          "antialiased dark",
-          spaceGrotesk.className
-        )}
-      >
+      <body className={cn(inter.variable, "antialiased font-sans")}>
         <ReactQueryClientProvider>
           <TrustlessWorkProvider>
             <WalletProvider>
               <EscrowProvider>
                 <EscrowDialogsProvider>
                   <EscrowAmountProvider>
-                    <div className="relative flex min-h-screen w-full">
-                      <div className="flex-1 flex flex-col w-full">
-                        <div className="container mx-auto">
-                          <Header />
-
-                          {children}
-                        </div>
-                      </div>
-                    </div>
-
-                    <Toaster position="top-right" richColors />
+                    {children}
+                    <Toaster position="top-right" />
                   </EscrowAmountProvider>
                 </EscrowDialogsProvider>
               </EscrowProvider>

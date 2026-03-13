@@ -1,4 +1,4 @@
-import axios, { AxiosInstance } from "axios";
+import { httpClient } from "@/lib/httpClient";
 
 export type ClaimROIPayload = {
   vaultContractId: string;
@@ -12,20 +12,20 @@ export type ClaimROIResponse = {
 };
 
 export class ClaimROIService {
-  private readonly axios: AxiosInstance;
-
-  constructor() {
-    this.axios = axios.create({
-      baseURL: "/api",
-    });
-  }
-
   async claimROI(payload: ClaimROIPayload): Promise<ClaimROIResponse> {
-    const response = await this.axios.post<ClaimROIResponse>(
-      "/vault-contract/claim",
-      payload
+    const { data } = await httpClient.post<{ unsignedXdr: string }>(
+      "/vault/claim",
+      {
+        contractId: payload.vaultContractId,
+        beneficiary: payload.beneficiaryAddress,
+        callerPublicKey: payload.beneficiaryAddress,
+      },
     );
 
-    return response.data;
+    return {
+      success: true,
+      xdr: data.unsignedXdr,
+      message: "Transaction built successfully.",
+    };
   }
 }

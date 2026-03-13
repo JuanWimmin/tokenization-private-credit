@@ -50,7 +50,7 @@ export async function POST(request: Request) {
     });
   } catch (error) {
     console.error("Claim transaction build error:", error);
-    const { message, details } = extractContractError(error);
+    const { message, details } = extractContractError(error, "vault");
     return new Response(
       JSON.stringify({
         error: message,

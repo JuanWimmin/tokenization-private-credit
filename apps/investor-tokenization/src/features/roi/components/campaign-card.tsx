@@ -1,62 +1,64 @@
-import {
-  Card,
-  CardContent,
-  CardHeader,
-} from "@tokenization/ui/card";
-import type { Campaign } from "../types/campaign.types";
-import { CampaignStatusBadge } from "./campaign-status-badge";
-import { ClaimRoiButton } from "./claim-roi-button";
+"use client";
 
-type CampaignCardProps = {
+import Link from "next/link";
+import { Badge } from "@tokenization/ui/badge";
+import { Button } from "@tokenization/ui/button";
+import { CampaignCard as SharedCampaignCard } from "@tokenization/ui/campaign-card";
+import { cn } from "@tokenization/shared/lib/utils";
+import { ExternalLink, FileText } from "lucide-react";
+import type { Campaign } from "../types/campaign.types";
+import { CAMPAIGN_STATUS_CONFIG } from "../constants/campaign-status";
+
+const ESCROW_EXPLORER_URL =
+  "https://stellar.expert/explorer/testnet/contract/CBBTYM6SM5KATWKLNXRUOGRVVGA762EZTB6LE7XEKZAX6VHVF7SYGIFO";
+
+interface CampaignCardProps {
   campaign: Campaign;
   onClaimRoi?: (campaignId: string) => void;
-};
-
-function formatMinInvest(cents: number, currency: string): string {
-  const value = cents / 100;
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency,
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(value);
 }
 
 export function CampaignCard({ campaign, onClaimRoi }: CampaignCardProps) {
+  const { title, description, status, id, loansCompleted, investedAmount, currency } = campaign;
+  const statusCfg = CAMPAIGN_STATUS_CONFIG[status];
+  const formattedInvested = investedAmount.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
   return (
-    <Card className="rounded-xl border bg-card shadow-sm overflow-hidden">
-      <CardHeader className="pb-3 px-6 pt-6 gap-2">
-        <div className="flex flex-wrap items-start justify-between gap-2">
-          <h3 className="text-lg font-bold text-foreground leading-tight pr-2">
-            {campaign.title}
-          </h3>
-          <CampaignStatusBadge status={campaign.status} />
-        </div>
-        <p className="text-sm text-muted-foreground leading-snug mt-1">
-          {campaign.description}
-        </p>
-      </CardHeader>
-      <CardContent className="px-6 pb-6 pt-0 flex flex-row items-end justify-between gap-4 flex-wrap">
-        <div className="flex items-baseline gap-6">
-          <div>
-            <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
-              Loans completed
-            </p>
-            <p className="text-base font-bold text-foreground mt-0.5">
-              {campaign.loansCompleted}
-            </p>
-          </div>
-          <div>
-            <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
-              Min. invest
-            </p>
-            <p className="text-base font-bold text-foreground mt-0.5">
-              {formatMinInvest(campaign.minInvestCents, campaign.currency)}
-            </p>
-          </div>
-        </div>
-        <ClaimRoiButton campaignId={campaign.id} onClick={onClaimRoi} />
-      </CardContent>
-    </Card>
+    <SharedCampaignCard
+      title={`#${id.slice(0, 3).toUpperCase()} ${title}`}
+      description={`${description} | Invested: ${formattedInvested} ${currency}`}
+      statusBadge={
+        <Badge
+          variant="outline"
+          className={cn("text-xs font-semibold uppercase tracking-wide", statusCfg.className)}
+        >
+          {statusCfg.label}
+        </Badge>
+      }
+      actions={
+        status === "CLAIMABLE" ? (
+          <Button
+            size="sm"
+            className="cursor-pointer gap-1.5"
+            onClick={() => onClaimRoi?.(id)}
+          >
+            <FileText className="size-3.5" />
+            Claim ROI
+          </Button>
+        ) : null
+      }
+      footer={
+        <Button
+          variant="ghost"
+          className="flex items-center gap-1 text-xs font-semibold text-primary hover:text-primary/80 transition-colors cursor-pointer"
+          asChild
+        >
+          <Link href={ESCROW_EXPLORER_URL} target="_blank" rel="noopener noreferrer">
+            See Escrow
+            <ExternalLink className="size-3" />
+          </Link>
+        </Button>
+      }
+      progress={{ label: "Loans Completed", value: loansCompleted }}
+    />
   );
 }

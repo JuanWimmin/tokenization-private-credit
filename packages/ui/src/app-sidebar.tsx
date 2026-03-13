@@ -62,11 +62,11 @@ export function AppSidebar({
   return (
     <Sidebar collapsible="icon" {...sidebarProps}>
       <SidebarHeader className="px-4 py-4">
-        <Link href={logoHref} className="flex items-center">
+        <Link href={logoHref} className="flex items-center justify-center">
           {logo.element ?? (
             // eslint-disable-next-line @next/next/no-img-element
             <Image
-            src={logo.src ?? "/logo.png"}
+              src={logo.src ?? "/logo.png"}
               alt={logo.alt ?? "logo"}
               width={logo.width}
               height={logo.height}

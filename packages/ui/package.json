@@ -36,7 +36,8 @@
     "./sidebar": "./src/sidebar.tsx",
     "./app-sidebar": "./src/app-sidebar.tsx",
     "./hooks/use-mobile": "./src/hooks/use-mobile.ts",
-    "./sidebar-wallet-button": "./src/sidebar-wallet-button.tsx"
+    "./sidebar-wallet-button": "./src/sidebar-wallet-button.tsx",
+    "./campaign-card": "./src/campaign-card.tsx"
   }
 }
 

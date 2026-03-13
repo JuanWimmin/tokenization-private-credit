@@ -52,7 +52,7 @@ export async function POST(request: Request) {
     });
   } catch (error) {
     console.error("Availability for exchange transaction build error:", error);
-    const { message, details } = extractContractError(error);
+    const { message, details } = extractContractError(error, "vault");
     return new Response(
       JSON.stringify({
         error: message,

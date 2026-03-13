@@ -8,7 +8,7 @@ soroban-sdk = { workspace = true }
 
 [dev-dependencies]
 soroban-sdk = { workspace = true, features = ["testutils"] }
-soroban-token-contract = { path = "../token-factory" }
+participation-token = { path = "../participation-token" }
 
 [lib]
 crate-type = ["cdylib", "rlib"]

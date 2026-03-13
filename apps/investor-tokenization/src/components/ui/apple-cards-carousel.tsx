@@ -42,6 +42,7 @@ type Card = {
   tokenSale?: string;
   tokenFactory?: string;
   vaultContractId?: string;
+  campaignId?: string;
   src: string;
   content: React.ReactNode;
 };
@@ -400,6 +401,7 @@ export const Card = ({
                           escrowId: card.escrowId,
                           tokenSaleContractId: card.tokenSale,
                           imageSrc: card.src,
+                          campaignId: card.campaignId,
                         }}
                       >
                         <InvestDialog tokenSaleContractId={card.tokenSale} />

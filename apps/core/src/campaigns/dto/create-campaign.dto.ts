@@ -39,4 +39,16 @@ export class CreateCampaignDto {
   @IsNumber()
   @IsPositive()
   loanSize: number;
+
+  @IsString()
+  @IsNotEmpty()
+  tokenFactoryId: string;
+
+  @IsString()
+  @IsNotEmpty()
+  tokenSaleId: string;
+
+  @IsString()
+  @IsOptional()
+  vaultId?: string;
 }

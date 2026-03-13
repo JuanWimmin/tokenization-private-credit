@@ -31,16 +31,22 @@ describe('CampaignsService', () => {
   let service: CampaignsService;
   let prisma: {
     campaign: {
+      findMany: jest.Mock;
       findUnique: jest.Mock;
+      create: jest.Mock;
       update: jest.Mock;
+      delete: jest.Mock;
     };
   };
 
   beforeEach(async () => {
     prisma = {
       campaign: {
+        findMany: jest.fn(),
         findUnique: jest.fn(),
+        create: jest.fn(),
         update: jest.fn(),
+        delete: jest.fn(),
       },
     };
 
@@ -52,6 +58,124 @@ describe('CampaignsService', () => {
     }).compile();
 
     service = module.get<CampaignsService>(CampaignsService);
+  });
+
+  afterEach(() => jest.clearAllMocks());
+
+  describe('findAll', () => {
+    it('should return all campaigns ordered by createdAt desc', async () => {
+      const campaigns = [makeCampaign(), makeCampaign({ id: 'campaign-2' })];
+      prisma.campaign.findMany.mockResolvedValue(campaigns);
+
+      const result = await service.findAll();
+
+      expect(result).toEqual(campaigns);
+      expect(prisma.campaign.findMany).toHaveBeenCalledWith({
+        orderBy: { createdAt: 'desc' },
+      });
+    });
+
+    it('should return empty array when no campaigns exist', async () => {
+      prisma.campaign.findMany.mockResolvedValue([]);
+
+      const result = await service.findAll();
+
+      expect(result).toEqual([]);
+    });
+  });
+
+  describe('findOne', () => {
+    it('should return a campaign by id with investments', async () => {
+      const campaign = makeCampaign();
+      prisma.campaign.findUnique.mockResolvedValue(campaign);
+
+      const result = await service.findOne('campaign-1');
+
+      expect(result).toEqual(campaign);
+      expect(prisma.campaign.findUnique).toHaveBeenCalledWith({
+        where: { id: 'campaign-1' },
+        include: { investments: true },
+      });
+    });
+
+    it('should throw NotFoundException when campaign does not exist', async () => {
+      prisma.campaign.findUnique.mockResolvedValue(null);
+
+      await expect(service.findOne('missing')).rejects.toThrow(
+        NotFoundException,
+      );
+    });
+  });
+
+  describe('create', () => {
+    it('should create a campaign', async () => {
+      const dto = {
+        name: 'New Campaign',
+        issuerAddress: '0xISSUER',
+        escrowId: 'escrow-1',
+        poolSize: 10000,
+        loanDuration: 30,
+        expectedReturn: 10,
+        loanSize: 2000,
+        tokenFactoryId: 'tf-1',
+        tokenSaleId: 'ts-1',
+      };
+      const created = makeCampaign(dto);
+      prisma.campaign.create.mockResolvedValue(created);
+
+      const result = await service.create(dto);
+
+      expect(result).toEqual(created);
+      expect(prisma.campaign.create).toHaveBeenCalledWith({ data: dto });
+    });
+  });
+
+  describe('update', () => {
+    it('should update a campaign', async () => {
+      const campaign = makeCampaign();
+      prisma.campaign.findUnique.mockResolvedValue(campaign);
+      const updated = { ...campaign, name: 'Updated' };
+      prisma.campaign.update.mockResolvedValue(updated);
+
+      const result = await service.update('campaign-1', { name: 'Updated' });
+
+      expect(result).toEqual(updated);
+      expect(prisma.campaign.update).toHaveBeenCalledWith({
+        where: { id: 'campaign-1' },
+        data: { name: 'Updated' },
+      });
+    });
+
+    it('should throw NotFoundException when updating non-existent campaign', async () => {
+      prisma.campaign.findUnique.mockResolvedValue(null);
+
+      await expect(
+        service.update('missing', { name: 'Updated' }),
+      ).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  describe('remove', () => {
+    it('should delete a campaign', async () => {
+      const campaign = makeCampaign();
+      prisma.campaign.findUnique.mockResolvedValue(campaign);
+      prisma.campaign.delete.mockResolvedValue(campaign);
+
+      const result = await service.remove('campaign-1');
+
+      expect(result).toEqual(campaign);
+      expect(prisma.campaign.delete).toHaveBeenCalledWith({
+        where: { id: 'campaign-1' },
+      });
+    });
+
+    it('should throw NotFoundException when deleting non-existent campaign', async () => {
+      prisma.campaign.findUnique.mockResolvedValue(null);
+
+      await expect(service.remove('missing')).rejects.toThrow(
+        NotFoundException,
+      );
+    });
   });
 
   describe('updateStatus', () => {

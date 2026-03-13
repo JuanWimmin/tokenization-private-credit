@@ -6,11 +6,16 @@ import { useWalletContext } from "./WalletProvider";
 import { Popover, PopoverContent, PopoverTrigger } from "@tokenization/ui/popover";
 import { Check, Copy, LogOut, ChevronRight, Wallet } from "lucide-react";
 
+type WalletButtonProps = {
+  /** Use "sidebar" for lighter styling inside a sidebar (no dark/black background) */
+  variant?: "default" | "sidebar";
+};
+
 /**
  * Wallet connection/disconnection button component
  * Shows different states based on wallet connection status
  */
-export const WalletButton = () => {
+export const WalletButton = ({ variant = "default" }: WalletButtonProps) => {
   const { handleConnect, handleDisconnect } = useWallet();
   const { walletAddress, walletName } = useWalletContext();
   const [copied, setCopied] = React.useState(false);
@@ -37,12 +42,17 @@ export const WalletButton = () => {
     }
   };
 
-  if (!mounted) {
+  const connectButtonClass =
+    variant === "sidebar"
+      ? "flex w-full items-center gap-2 rounded-xl px-3 h-12 border border-border bg-sidebar-accent text-sidebar-accent-foreground hover:bg-sidebar-accent/80 transition-colors font-medium text-sm cursor-pointer"
+      : "flex w-full items-center gap-2 rounded-xl px-3 h-12 bg-primary text-primary-foreground hover:bg-primary/90 transition-colors font-medium text-sm cursor-pointer";
+
+  if (!mounted || !walletAddress) {
     return (
       <button
         type="button"
-        onClick={mounted ? handleConnect : undefined}
-        className="flex w-full items-center gap-2 rounded-xl px-3 h-12 bg-primary text-primary-foreground hover:bg-brand-primary-hover transition-colors font-medium text-sm cursor-pointer"
+        onClick={handleConnect}
+        className={connectButtonClass}
       >
         <Wallet className="size-5 shrink-0" />
         <span>Conectar Billetera</span>
