@@ -19,6 +19,7 @@ import {
 } from "@tokenization/ui/dialog";
 import { Loader2 } from "lucide-react";
 import { useCreateVault } from "./useCreateVault";
+import { numericInputKeyDown, parseNumericInput } from "@/lib/numeric-input";
 import { useWatch } from "react-hook-form";
 import { VaultDeploySuccessDialog } from "./VaultDeploySuccessDialog";
 
@@ -59,7 +60,10 @@ export const CreateVaultDialog = () => {
               <FormField
                 control={form.control}
                 name="price"
-                rules={{ required: "Price is required" }}
+                rules={{
+                  required: "Price is required",
+                  max: { value: 100, message: "Cannot exceed 100%" },
+                }}
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel className="flex items-center">
@@ -72,11 +76,13 @@ export const CreateVaultDialog = () => {
                     </FormDescription>
                     <FormControl>
                       <Input
-                        type="number"
-                        step="0.01"
+                        type="text"
+                        inputMode="decimal"
                         placeholder="Enter price"
                         autoComplete="off"
                         {...field}
+                        onKeyDown={numericInputKeyDown}
+                        onChange={(e) => field.onChange(String(parseNumericInput(e.target.value, 100)))}
                       />
                     </FormControl>
                     <div className="text-xs text-muted-foreground mt-1">

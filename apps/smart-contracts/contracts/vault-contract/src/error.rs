@@ -9,6 +9,16 @@ pub enum ContractError {
     ExchangeIsCurrentlyDisabled = 3,
     BeneficiaryHasNoTokensToClaim = 4,
     VaultDoesNotHaveEnoughUSDC = 5,
+    TokenAndUsdcCannotBeSame = 6,
+    InvalidAddressConfiguration = 7,
+    AlreadyInitialized = 8,
+    InvalidRoiPercentage = 9,
+    EnabledFlagNotFound = 10,
+    RoiPercentageNotFound = 11,
+    TokenAddressNotFound = 12,
+    UsdcAddressNotFound = 13,
+    ArithmeticOverflow = 14,
+    NotInitialized = 15,
 }
 
 impl fmt::Display for ContractError {
@@ -27,6 +37,32 @@ impl fmt::Display for ContractError {
             ContractError::VaultDoesNotHaveEnoughUSDC => {
                 write!(f, "Vault does not have enough USDC")
             }
+            ContractError::TokenAndUsdcCannotBeSame => {
+                write!(f, "Token and USDC addresses cannot be the same")
+            }
+            ContractError::InvalidAddressConfiguration => {
+                write!(f, "Invalid address configuration: admin cannot be token or USDC address")
+            }
+            ContractError::AlreadyInitialized => {
+                write!(f, "Contract has already been initialized")
+            }
+            ContractError::InvalidRoiPercentage => {
+                write!(f, "ROI percentage must be between 0 and 1000")
+            }
+            ContractError::EnabledFlagNotFound => {
+                write!(f, "Enabled flag not found in storage")
+            }
+            ContractError::RoiPercentageNotFound => {
+                write!(f, "ROI percentage not found in storage")
+            }
+            ContractError::TokenAddressNotFound => {
+                write!(f, "Token address not found in storage")
+            }
+            ContractError::UsdcAddressNotFound => {
+                write!(f, "USDC address not found in storage")
+            }
+            ContractError::ArithmeticOverflow => write!(f, "Arithmetic overflow"),
+            ContractError::NotInitialized => write!(f, "Contract not initialized"),
         }
     }
 }

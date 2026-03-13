@@ -24,6 +24,14 @@ export class InvestmentsService {
     return investment;
   }
 
+  findByInvestor(investorAddress: string) {
+    return this.prisma.investment.findMany({
+      where: { investorAddress },
+      orderBy: { createdAt: 'desc' },
+      include: { campaign: true },
+    });
+  }
+
   findByCampaign(campaignId: string) {
     return this.prisma.investment.findMany({
       where: { campaignId },

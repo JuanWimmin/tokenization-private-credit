@@ -1,4 +1,4 @@
-import axios, { AxiosInstance } from "axios";
+import { httpClient } from "@/lib/httpClient";
 
 export type BuyTokenPayload = {
   tokenSaleContractId: string;
@@ -15,20 +15,23 @@ export type DeployTokenResponse = {
 };
 
 export class TokenService {
-  private readonly axios: AxiosInstance;
-
-  constructor() {
-    this.axios = axios.create({
-      baseURL: "/api",
-    });
-  }
-
   async buyToken(payload: BuyTokenPayload): Promise<DeployTokenResponse> {
-    const response = await this.axios.post<DeployTokenResponse>(
+    const { data } = await httpClient.post<{ unsignedXdr: string }>(
       "/token-sale/buy",
-      payload,
+      {
+        contractId: payload.tokenSaleContractId,
+        usdcAddress: payload.usdcAddress,
+        payer: payload.payerAddress,
+        beneficiary: payload.beneficiaryAddress,
+        amount: payload.amount,
+        callerPublicKey: payload.payerAddress,
+      },
     );
 
-    return response.data;
+    return {
+      success: true,
+      xdr: data.unsignedXdr,
+      message: "Transaction built successfully.",
+    };
   }
 }

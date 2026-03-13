@@ -1,32 +1,22 @@
 "use client";
 
-import { Input } from "@tokenization/ui/input";
 import { Search } from "lucide-react";
-import { cn } from "@/lib/utils";
 
-type CampaignSearchProps = {
-  value?: string;
-  onChange?: (value: string) => void;
-  placeholder?: string;
-  className?: string;
-};
+interface CampaignSearchProps {
+  value: string;
+  onChange: (value: string) => void;
+}
 
-export function CampaignSearch({
-  value,
-  onChange,
-  placeholder = "Search campaigns...",
-  className,
-}: CampaignSearchProps) {
+export function CampaignSearch({ value, onChange }: CampaignSearchProps) {
   return (
-    <div className={cn("relative flex-1 max-w-sm", className)}>
-      <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none" />
-      <Input
+    <div className="relative">
+      <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-text-muted" />
+      <input
         type="search"
+        placeholder="Search campaigns..."
         value={value}
-        onChange={(e) => onChange?.(e.target.value)}
-        placeholder={placeholder}
-        className="pl-9 h-9 rounded-lg border-input bg-background text-sm"
-        aria-label="Search campaigns"
+        onChange={(e) => onChange(e.target.value)}
+        className="h-10 w-full rounded-xl border border-border bg-card pl-9 pr-4 text-sm text-foreground placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-ring"
       />
     </div>
   );

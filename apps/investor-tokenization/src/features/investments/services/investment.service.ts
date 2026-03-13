@@ -1,4 +1,5 @@
 import axios, { AxiosInstance } from "axios";
+import { httpClient } from "@/lib/httpClient";
 
 export type TokenBalancePayload = {
   tokenFactoryAddress: string;
@@ -22,6 +23,50 @@ export type TokenMetadataResponse = {
   decimals: number;
   error?: string;
 };
+
+export type CreateInvestmentPayload = {
+  campaignId: string;
+  investorAddress: string;
+  usdcAmount: number;
+  tokenAmount: number;
+  txHash: string;
+};
+
+export type InvestmentFromApi = {
+  id: string;
+  campaignId: string;
+  investorAddress: string;
+  usdcAmount: number;
+  tokenAmount: number;
+  txHash: string;
+  createdAt: string;
+  campaign: {
+    id: string;
+    name: string;
+    description: string | null;
+    status: string;
+    escrowId: string;
+    tokenFactoryId: string | null;
+    tokenSaleId: string | null;
+    vaultId: string | null;
+    expectedReturn: number;
+    loanDuration: number;
+  };
+};
+
+export async function createInvestment(payload: CreateInvestmentPayload) {
+  const { data } = await httpClient.post("/investments", payload);
+  return data;
+}
+
+export async function fetchMyInvestments(
+  investorAddress: string,
+): Promise<InvestmentFromApi[]> {
+  const { data } = await httpClient.get<InvestmentFromApi[]>(
+    `/investments/investor/${investorAddress}`,
+  );
+  return data;
+}
 
 export class InvestmentService {
   private readonly axios: AxiosInstance;

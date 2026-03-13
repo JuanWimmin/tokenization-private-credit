@@ -1,4 +1,4 @@
-import { IsString, IsBoolean, IsNumber, IsNotEmpty } from 'class-validator';
+import { IsString, IsBoolean, IsInt, IsNotEmpty } from 'class-validator';
 
 export class DeployVaultDto {
   @IsString()
@@ -9,7 +9,7 @@ export class DeployVaultDto {
   @IsNotEmpty()
   enabled: boolean;
 
-  @IsNumber()
+  @IsInt()
   @IsNotEmpty()
   roiPercentage: number;
 

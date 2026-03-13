@@ -1,8 +1,10 @@
 #![no_std]
 
-mod sale;
-
-pub use crate::sale::ParticipationTokenContract;
-
-#[cfg(test)]
+mod allowance;
+mod balance;
+mod contract;
+mod metadata;
+mod storage_types;
 mod test;
+
+pub use crate::contract::{Token, TokenClient};

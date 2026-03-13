@@ -4,21 +4,26 @@ import { CreateInvestmentDto } from './dto/create-investment.dto';
 
 @Controller('investments')
 export class InvestmentsController {
-  constructor(private readonly investmentsService: InvestmentsService) {}
+  constructor(private readonly investmentsService: InvestmentsService) { }
 
   @Get()
   findAll() {
     return this.investmentsService.findAll();
   }
 
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.investmentsService.findOne(id);
+  @Get('investor/:address')
+  findByInvestor(@Param('address') address: string) {
+    return this.investmentsService.findByInvestor(address);
   }
 
   @Get('campaign/:campaignId')
   findByCampaign(@Param('campaignId') campaignId: string) {
     return this.investmentsService.findByCampaign(campaignId);
+  }
+
+  @Get(':id')
+  findOne(@Param('id') id: string) {
+    return this.investmentsService.findOne(id);
   }
 
   @Post()

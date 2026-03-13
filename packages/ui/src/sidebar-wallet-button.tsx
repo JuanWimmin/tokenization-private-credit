@@ -15,7 +15,7 @@ export function SidebarWalletButton() {
         isCollapsed && "justify-center"
       )}
     >
-      <WalletButton />
+      <WalletButton variant="sidebar" />
     </div>
   )
 }

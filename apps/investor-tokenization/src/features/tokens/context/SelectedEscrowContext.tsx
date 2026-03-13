@@ -8,6 +8,7 @@ export type SelectedEscrowValue = {
   escrowId: string;
   tokenSaleContractId?: string;
   imageSrc?: string;
+  campaignId?: string;
 };
 
 const SelectedEscrowContext = createContext<SelectedEscrowValue | undefined>(

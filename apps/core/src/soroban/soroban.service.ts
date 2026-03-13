@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { contract, Networks } from '@stellar/stellar-sdk';
+import { Ok } from '@stellar/stellar-sdk/contract';
 
 @Injectable()
 export class SorobanService {
@@ -40,8 +41,27 @@ export class SorobanService {
       publicKey: callerPublicKey,
     });
 
-    const tx = await (client)[method](args);
+    const tx = await client[method](args);
 
     return tx.toXDR();
+  }
+
+  async readContractState(
+    contractId: string,
+    method: string,
+    args: Record<string, unknown>,
+    callerPublicKey: string,
+  ): Promise<unknown> {
+    const client = await contract.Client.from({
+      contractId,
+      rpcUrl: this.rpcUrl,
+      networkPassphrase: this.networkPassphrase,
+      publicKey: callerPublicKey,
+    });
+
+    const result = await client[method](args);
+    const raw = result.result;
+
+    return raw instanceof Ok ? raw.unwrap() : raw;
   }
 }

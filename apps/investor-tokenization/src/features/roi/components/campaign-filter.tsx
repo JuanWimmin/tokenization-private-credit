@@ -1,49 +1,38 @@
 "use client";
 
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@tokenization/ui/select";
-import { cn } from "@/lib/utils";
+import type { CampaignStatus } from "../types/campaign.types";
 
-const filterOptions = [
-  { value: "all", label: "All Campaigns" },
-  { value: "ready", label: "Ready" },
-  { value: "pending", label: "Pending" },
-  { value: "closed", label: "Closed" },
+const STATUS_OPTIONS: { value: CampaignStatus | "all"; label: string }[] = [
+  { value: "all", label: "All" },
+  { value: "FUNDRAISING", label: "Fundraising" },
+  { value: "ACTIVE", label: "Active" },
+  { value: "REPAYMENT", label: "Repayment" },
+  { value: "CLAIMABLE", label: "Claimable" },
+  { value: "CLOSED", label: "Closed" },
 ];
 
-type CampaignFilterProps = {
-  value?: string;
-  onValueChange?: (value: string) => void;
-  className?: string;
-};
+interface CampaignFilterProps {
+  value: CampaignStatus | "all";
+  onChange: (value: CampaignStatus | "all") => void;
+}
 
-export function CampaignFilter({
-  value = "all",
-  onValueChange,
-  className,
-}: CampaignFilterProps) {
+export function CampaignFilter({ value, onChange }: CampaignFilterProps) {
   return (
-    <Select value={value} onValueChange={onValueChange}>
-      <SelectTrigger
-        className={cn(
-          "w-[180px] rounded-lg border border-input bg-background h-9 text-sm font-medium text-black",
-          className
-        )}
-      >
-        <SelectValue placeholder="All Campaigns" />
-      </SelectTrigger>
-      <SelectContent align="start">
-        {filterOptions.map((opt) => (
-          <SelectItem key={opt.value} value={opt.value}>
-            {opt.label}
-          </SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
+    <div className="flex gap-2 flex-wrap">
+      {STATUS_OPTIONS.map((option) => (
+        <button
+          key={option.value}
+          type="button"
+          onClick={() => onChange(option.value)}
+          className={`h-8 rounded-lg px-3 text-xs font-medium transition-colors ${
+            value === option.value
+              ? "bg-primary text-primary-foreground"
+              : "bg-secondary text-secondary-foreground hover:bg-secondary/70"
+          }`}
+        >
+          {option.label}
+        </button>
+      ))}
+    </div>
   );
 }

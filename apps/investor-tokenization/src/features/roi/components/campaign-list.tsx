@@ -7,13 +7,23 @@ type CampaignListProps = {
 };
 
 export function CampaignList({ campaigns, onClaimRoi }: CampaignListProps) {
+  if (campaigns.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center py-16 text-text-muted">
+        <p className="text-sm">No campaigns available.</p>
+      </div>
+    );
+  }
+
   return (
-    <ul className="flex flex-col gap-4 list-none p-0 m-0">
+    <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
       {campaigns.map((campaign) => (
-        <li key={campaign.id}>
-          <CampaignCard campaign={campaign} onClaimRoi={onClaimRoi} />
-        </li>
+        <CampaignCard
+          key={campaign.id}
+          campaign={campaign}
+          onClaimRoi={onClaimRoi}
+        />
       ))}
-    </ul>
+    </div>
   );
 }
